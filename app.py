@@ -32,6 +32,7 @@ def start():  # put application's code here
 @app.route('/image', methods=['POST'])
 def imageReceive():
     if request.method == 'POST':
+        print("### Item Retrieval by Item Image ###")
         file_ = request.files['file']
         if file_ is None:
             return "Fail"
@@ -53,24 +54,33 @@ def userAdd():
     global purchaseHistory
     if request.method == 'POST':
         username = request.get_json()['username']
-        print(username)
+        print(f"### Add New User Column to PurchaseHistory.csv -> {username} ###")
         purchaseHistory[username] = np.zeros(1080, dtype=np.uint8)
         try:
             purchaseHistory.to_csv('PurchaseHistory.csv')
+            purchaseHistory = pd.read_csv('PurchaseHistory.csv', index_col='itemid')
         except:
             return "FAIL"
-        purchaseHistory = pd.read_csv('PurchaseHistory.csv', index_col='itemid')
         return "SUCCESS"
     return "FAIL"
 
 @app.route("/order", methods=['POST'])
 def orderAdd():
+    global purchaseHistory
     if request.method == 'POST':
         params = request.get_json()
         username = params['username']
         itemids = params['itemids']
-        print(username)
-        print(itemids)
+        print(f"### User PurChase Item Check -> {username} ###")
+        print(f'Item ID: {itemids}')
+        try:
+            purchaseHistory[username][itemids] = 1
+            purchaseHistory.to_csv('PurchaseHistory.csv')
+            purchaseHistory = pd.read_csv('PurchaseHistory.csv', index_col='itemid')
+        except:
+            return "FAIL"
+        return "SUCCESS"
+    return "FAIL"
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000) # debug=True
