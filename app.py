@@ -1,10 +1,11 @@
 import os.path
-
+import time
 from flask import Flask, request
 import numpy as np
 import glob
 from PIL import Image
 import FeatureExtractor
+import CollabFilter
 import pandas as pd
 
 app = Flask(__name__)
@@ -23,6 +24,9 @@ print(len(features))
 
 # 추천 시스템에서 사용할 사용자 * 상품 행렬 - 구매 유무
 purchaseHistory = pd.read_csv('PurchaseHistory.csv', index_col='itemid')
+# 상품 추천
+CF = CollabFilter
+recSys = CF.CollabFilter(purchaseHistory)
 
 @app.route('/') # Test
 def start():  # put application's code here
@@ -51,7 +55,7 @@ def imageReceive():
 
 @app.route('/user', methods=['POST'])
 def userAdd():
-    global purchaseHistory
+    global purchaseHistory, recSys
     if request.method == 'POST':
         username = request.get_json()['username']
         print(f"### Add New User Column to PurchaseHistory.csv -> {username} ###")
@@ -59,14 +63,15 @@ def userAdd():
         try:
             purchaseHistory.to_csv('PurchaseHistory.csv')
             purchaseHistory = pd.read_csv('PurchaseHistory.csv', index_col='itemid')
+            recSys = CF.CollabFilter(purchaseHistory)
         except:
             return "FAIL"
         return "SUCCESS"
     return "FAIL"
 
 @app.route("/order", methods=['POST'])
-def orderAdd():
-    global purchaseHistory
+def order():
+    global purchaseHistory, recSys
     if request.method == 'POST':
         params = request.get_json()
         username = params['username']
@@ -74,12 +79,25 @@ def orderAdd():
         print(f"### User PurChase Item Check -> {username} ###")
         print(f'Item ID: {itemids}')
         try:
-            purchaseHistory[username][itemids] = 1
+            purchaseHistory[username][itemids] += 1
             purchaseHistory.to_csv('PurchaseHistory.csv')
             purchaseHistory = pd.read_csv('PurchaseHistory.csv', index_col='itemid')
         except:
             return "FAIL"
         return "SUCCESS"
+    return "FAIL"
+
+@app.route("/recommend", methods=['POST'])
+def recommend():
+    global recSys
+    if request.method == 'POST':
+        username = request.get_json()['username']
+        print(f"### Item Recommendation to User -> {username} ###")
+        try:
+            result = recSys.recommendation_system(username)
+        except:
+            return "FAIL"
+        return result
     return "FAIL"
 
 if __name__ == '__main__':
