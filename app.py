@@ -97,6 +97,7 @@ def recommend():
             result = recSys.recommendation_system(username)
         except:
             return "FAIL"
+        print(f'Recommendation Item id List -> {result}')
         return result
     return "FAIL"
 
